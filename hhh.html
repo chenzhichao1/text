@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+		<script src="vue.min.js"></script>
+		<script type="text/javascript">
+			window.onload = function(){
+				//全局过滤器，对时间进行格式化，所有的VM实例都可以共享
+				Vue.filter('leach', function(dateStr,pattern){
+					//根据给定的时间字符串，得到待定的时间
+					var full = new Date(dateStr)
+					var y = full.getFullYear()
+					var m = full.getMonth()+1
+					var d = full.getDate()
+//					return y  + '-' + m + '-' + d
+					
+					//toLowerCase()将字符串转换成小写形式
+					if(pattern && pattern.toLowerCase() === 'yyyy-mm-dd'){
+						
+						return `${y}-${m}-${d}`
+					}
+					else{
+						var hh = full.getHours()
+						var mm = full.getMinutes()
+						var ss = full.getSeconds()
+						return `${y}-${m}-${d} ${hh}:${mm}:${ss}`
+					}
+					
+				})
+				
+				//定义全局键盘修饰符，后面加上键盘码值
+				Vue.config.keyCodes.f2 = 113
+				
+				//Vue.directive定义全局指令
+				//参数一： 指令的名称，定义的时候前面不用加v-前缀，调用的时候要在前面加上v-前缀
+				//参数二； 是一个函数对象，在对象上有一些指令相关的函数，会在特定的函数阶段中执行相关的操作
+				Vue.directive('focus',{
+					//注意：每个函数中第一个参数永远都是el，表示被绑定了指令的元素，这个el是原生的js对象
+					//在元素刚绑定指令的时候，还没有插入到到dom树中，此时调用focus方法没有起作用
+					//每当指令绑定到元素上时，会立即执行bind函数，只执行一次
+					bind: function(el){
+						el.focus()
+						//和样式设置有关的操作，一般都是在bind中执行
+						//通过指令绑定样式给元素，不管有没有插入到dou树中去，该元素中都会添加内联样式
+						//将来元素肯定显示到页面中，这时候，浏览器渲染引擎必然会解析样式，设置给这个元素
+					},
+					//表示元素插入到dom中的时候，会触发执行inserted函数，只执行一次
+					inserted: function(el){
+						el.focus()
+						//和js行为有关的操作，最好在inserted中去执行，防止js行为不生效
+					},
+					//当vnode更新的时候，会执行updated，可能触发多次
+					updated: function(el){
+						el.focus()
+					}
+				})
+				//全局的
+				Vue.directive('color',{
+					//第二个参数，binding 是一个对象（要操作的对象），包含多个属性
+					bind: function(el,binding){
+						//el.style.color = 'red'
+						el.style.color = binding.value
+						
+						console.log(el)
+						console.log(binding.name)//binding.name 是指令的名称
+						console.log(binding.value) //打印出来是指令的绑定值
+						console.log(binding.expression)//打印出来指令绑定值的字符串形式
+					}
+				})
+				
+				var item = new Vue({
+					el: "#app",
+					data: {
+						id: '',
+						name: '',
+						time: '',
+						operation: '',
+						keyWords: '',
+						list:[
+							{id:1, name:"孙悟空", time:new Date(), operation:"删除"},
+							{id:2, name:"猪八戒", time:new Date(), operation:"删除"},
+							{id:3, name:"沙和尚", time:new Date(), operation:"删除"},
+							{id:4, name:"牛魔王", time:new Date(), operation:"删除"}
+						]
+					},
+					methods:{
+						add: function(){
+							this.list.push({id:this.id, name:this.name, time:new Date(), operation:"删除"}),
+							this.id = '',
+							this.name = ''
+						},
+						del: function(id){
+							//根据id，找到要删除这一项的索引
+							//找到索引值后，直接调用数组的splice方法
+							//在数组的some方法中，如果return true，就会立刻停止这个数组的后续循环
+							
+//							this.list.some((item,i) => {
+//								if(item.id == id){
+//									this.list.splice(i,1)
+//									return true
+//								}
+//							})
+							
+							//除了上面一种方法外（万能性），还有下面一种方法（对数组索引具有针对性）
+							var index = this.list.findIndex(item => {
+								if(item.id == id){
+									return true;
+								}
+							})
+							//根据索引删除一个元素
+							this.list.splice(index, 1)
+						},
+						search(keywords){
+							//注意： forEach some filter findIndex,这些都是属于数组的新方法
+							//都会对数组的每一项进行遍历，执行相关的操作
+							//如果包含，则返回true，否则返回false
+							//模糊搜索方法一
+//							var newList = []
+//							this.list.forEach(item => {
+//								if(item.name.indexOf(keywords) != -1)
+//								newList.push(item)
+//							})
+//							return newList
+							
+							//模糊搜索方法二
+							var newList = this.list.filter(item => {
+								if(item.name.includes(keywords)){
+									return item
+								}	
+							})
+							return newList
+						}
+					},
+					//定义私有过滤器 过滤器有两个条件：过滤器名称和处理函数
+					//过滤器调用的时候，采用的是就近原则，如果私有过滤器和全局过滤器的名称一样，采用私用过滤器
+					filters: {
+						leach: function(dateStr,pattern){
+							//根据给定的时间字符串，得到待定的时间
+							var full = new Date(dateStr)
+							var y = full.getFullYear()
+							var m = (full.getMonth()+1).toString().padStart(2,'0')
+							var d = full.getDate().toString().padStart(2,'0')
+		//					return y  + '-' + m + '-' + d
+							
+							//toLowerCase()将字符串转换成小写形式
+							if(pattern && pattern.toLowerCase() === 'yyyy-mm-dd'){
+								
+								return `${y}-${m}-${d}`
+							}
+							else{
+								var hh = full.getHours().toString().padStart(2,'0')
+								var mm = full.getMinutes().toString().padStart(2,'0')
+								var ss = full.getSeconds().toString().padStart(2,'0')
+								return `${y}-${m}-${d} ${hh}:${mm}:${ss}`
+							}
+						}
+					},
+					
+					//定义一个私有的指令自定义
+					directives: {
+						'fontweight':  {
+							bind: function(el,bind){
+								el.style.fontWeight = bind.value
+							}
+						},
+						'fontsize': function(el,binding){
+							el.style.fontSize = parseInt(binding.value) + 'px'
+						}
+					}
+				})
+			}
+			
+		</script>
+		<style type="text/css">
+			.panel-title {
+				height: 40px;
+				line-height: 40px;
+				background-color: deepskyblue;
+			}
+			.panel-body{
+				margin: 20px 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="app">
+			<div class="panel panel-primary">
+				<div class="panel-heading">
+					<h5 class="panel-title" v-fontweight='700' v-fontsize= "'20px'">添加名字</h5>
+				</div>
+				
+				<div class="panel-body form-inline">
+					<!--lable标签：用于绑定一个表单元素，当点击lable标签的时候，被绑定的表单元素就会获得输入焦点。-->
+					<label>
+						ID:
+						<input class="form-control" type="text" v-model="id"/>
+					</label>
+					<label>
+						Name:
+						<!--@keyup.enter = "add" 或者是 @keyup.13 = "add"-->
+						<input class="form-control" type="text" v-model="name" @keyup.f2 = "add"/>
+					</label>
+					<input class="btn btn-primary" type="button" value="添加" @click="add"/>
+					<label>
+						请输入关键字:
+						<!--注意v-color="'red'"中red要加单引号，才是值，不加是变量-->
+						<input class="form-control" type="text" v-model="keyWords" v-focus v-color="'skyblue'" />
+					</label>
+				</div>
+			</div>
+			
+			<table class="table table-hover table-striped table-bordered">
+				<thead>
+					<th>id</th>
+					<th>name</th>
+					<th>time</th>
+					<th>operation</th>
+				</thead>
+				<tbody>
+					<tr v-for="item in search(keyWords)" :key="item.id">
+						<td>{{item.id}}</td>
+						<td>{{item.name}}</td>
+						<td>{{item.time | leach('yyyy-dd-mm')}}</td>
+						<td><a href="" @click.prevent="del(item.id)">删除</a></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</body>
+</html>
+
+<!--
+	使用es6中的字符串新方法String.prototype.padStrart(maxLength,fillString='')
+	或者是String.prototype.padEnd(maxLength,fillString='')来填充字符串
+	比如：var m = (full.getMonth()+1).toString().padStart(2,'0')
+-->
